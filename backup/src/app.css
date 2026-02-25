@@ -1,0 +1,161 @@
+page {
+  background-color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.container {
+  padding: 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+.title {
+  font-size: 48rpx;
+  font-weight: bold;
+  margin-bottom: 64rpx;
+  color: #333333;
+}
+
+.price-card {
+  width: 600rpx;
+  padding: 40rpx;
+  border: 1px solid #e0e0e0;
+  border-radius: 16rpx;
+  background-color: #f9f9f9;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.price-label {
+  font-size: 28rpx;
+  color: #666666;
+  margin-bottom: 24rpx;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1px dashed #cccccc;
+}
+
+.price-name {
+  font-size: 26rpx;
+  color: #333333;
+}
+
+.price-value {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #d4a017;
+}
+
+.trend-up {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 32rpx 0;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background-color: #e8f5e9;
+  border: 1px solid #c8e6c9;
+}
+
+.trend-down {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 32rpx 0;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+}
+
+.trend-value-up {
+  font-weight: bold;
+  margin-right: 16rpx;
+  color: #4caf50;
+}
+
+.trend-value-down {
+  font-weight: bold;
+  margin-right: 16rpx;
+  color: #f44336;
+}
+
+.trend-text {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+.last-updated {
+  font-size: 24rpx;
+  color: #999999;
+  margin-top: 24rpx;
+}
+
+.chart-section {
+  width: 600rpx;
+  margin-bottom: 40rpx;
+}
+
+.chart-title {
+  display: block;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 16rpx;
+}
+
+.chart-container {
+  height: 384rpx;
+  border: 1px solid #e0e0e0;
+  border-radius: 8rpx;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+.chart-placeholder {
+  height: 384rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 8rpx;
+  background-color: #f5f5f5;
+}
+
+.chart-placeholder-text {
+  color: #999999;
+}
+
+.refresh-button {
+  background-color: #1890ff;
+  color: #ffffff;
+  border-radius: 8rpx;
+  padding: 24rpx;
+  margin-bottom: 40rpx;
+  font-size: 28rpx;
+}
+
+.refresh-button-hover {
+  opacity: 0.8;
+}
+
+.notice {
+  padding: 32rpx;
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+  width: 600rpx;
+  text-align: center;
+}
+
+.notice-text {
+  font-size: 26rpx;
+  color: #666666;
+}
