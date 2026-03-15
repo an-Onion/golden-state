@@ -44,6 +44,7 @@
     <view class="chart-section">
       <text class="chart-title">金价趋势图</text>
       <view v-if="priceHistory.length > 1" class="chart-container">
+      <view id="goldPriceChart" class="chart-canvas" />
         <canvas 
           canvas-id="goldPriceChart" 
           id="goldPriceChart" 
@@ -113,13 +114,31 @@ const lastUpdated = ref('')
 const priceTrend = ref<PriceTrend | null>(null)
 const priceHistory = ref<PricePoint[]>([])
 let chartInstance: any = null
+let chartInitializing = false
 let timer: ReturnType<typeof setInterval> | null = null
 
 const initChart = () => {
+
+  if( chartInstance) return;
+
+  const chartElement = document.getElementById('goldPriceChart')
+
+  if( !chartElement){
+    chartInitializing = false
+    return
+  };
+
+  chartInstance = echarts.init(chartElement as HTMLElement)
+  chartInitializing = false
+  updateChart();
+  return
+
+
   const query = uni.createSelectorQuery()
   query.select('#goldPriceChart')
     .fields({ node: true, size: true })
     .exec((res: any) => {
+      chartInitializing = false
       if (res[0]) {
         const canvas = res[0]
         const ctx = canvas.getContext('2d')
@@ -141,6 +160,14 @@ const initChart = () => {
         updateChart()
       }
     })
+}
+
+const ensureChartInitialized = () => {
+  if( chartInstance || chartInitializing || priceHistory.value.length <= 1) return;
+  chartInitializing = true
+  nextTick(() => {
+    initChart()
+  })  
 }
 
 const updateChart = () => {
@@ -229,7 +256,8 @@ const fetchGoldPrices = () => {
     
     priceHistory.value = [...priceHistory.value, { time: currentTime, price: currentPrice }].slice(-10)
     
-    if (priceHistory.value.length > 1) {
+    ensureChartInitialized()
+    if (chartInstance) {
       updateChart()
     }
   }, 500)
@@ -247,12 +275,6 @@ const touchHandler = (e: any) => {
 
 onMounted(() => {
   fetchGoldPrices()
-  
-  setTimeout(() => {
-    if (priceHistory.value.length > 1) {
-      initChart()
-    }
-  }, 1000)
   
   timer = setInterval(() => {
     fetchGoldPrices()
