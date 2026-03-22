@@ -8,5 +8,14 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src')
     }
+  },
+  server: {
+    proxy: {
+      '/api/gold': {
+        target: 'https://api.jisuapi.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/gold/, '')
+      }
+    }
   }
 })

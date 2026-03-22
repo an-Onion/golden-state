@@ -87,23 +87,126 @@ interface PriceTrend {
   change: string
 }
 
+interface GoldAPIResponse {
+  status: number
+  msg: string
+  result: Array<{
+    type: string
+    typename: string
+    price: string
+    openingprice: string
+    maxprice: string
+    minprice: string
+    changepercent: string
+    lastclosingprice: string
+    tradeamount: string
+    updatetime: string
+  }>
+}
+
 const goldPriceService = {
-  getCurrentPrices: (): CurrentPrices => {
-    const basePrice = 785 + Math.random() * 10
-    return {
-      au9999: { name: '足金999', price: basePrice.toFixed(2) },
-      au999: { name: '足金990', price: (basePrice - 5).toFixed(2) },
-      au100: { name: '足金999.9', price: (basePrice + 3).toFixed(2) },
-      international: { name: '国际金价', price: (basePrice * 7.2 + 50).toFixed(0), unit: ' 美元/盎司' }
+  getCurrentPrices: async (): Promise<CurrentPrices> => {
+    try {
+      const apiKey = import.meta.env.VITE_GOLD_API_KEY
+      
+      console.log('环境变量:', { 
+        apiKey: apiKey ? apiKey.substring(0, 8) + '...' : 'undefined'
+      })
+      
+      if (!apiKey) {
+        console.error('API key 未配置')
+        throw new Error('API key not configured')
+      }
+      
+      // 使用 Vite 代理避免 CORS 问题
+      const url = `/api/gold/gold/shgold?appkey=${apiKey}`
+      console.log('请求 URL:', url)
+      
+      const response = await fetch(url)
+      console.log('响应状态:', response.status)
+      
+      const data: GoldAPIResponse = await response.json()
+      console.log('API 返回数据:', JSON.stringify(data, null, 2))
+      
+      if (data.status !== 0) {
+        console.error('API 返回错误:', data.msg)
+        throw new Error(data.msg || '获取金价失败')
+      }
+      
+      // 从 API 结果中提取需要的金价数据
+      const result = data.result
+      console.log('金价数据数量:', result.length)
+      
+      // 查找 AU99.99（足金 999）
+      const au9999Item = result.find(item => item.type === 'AU99.99')
+      console.log('AU99.99 数据:', au9999Item)
+      
+      // 查找 Au99.95（近似足金 990）
+      const au999Item = result.find(item => item.type === 'Au99.95')
+      console.log('Au99.95 数据:', au999Item)
+      
+      // 查找 Au100g（足金 100G）
+      const au100Item = result.find(item => item.type === 'Au100g')
+      console.log('Au100g 数据:', au100Item)
+      
+      // 计算国际金价（使用 Au(T+D) 作为参考，转换为美元/盎司）
+      const auTDItem = result.find(item => item.type === 'Au(T+D)')
+      const internationalPrice = auTDItem ? (parseFloat(auTDItem.price) * 7.2).toFixed(0) : '0'
+      console.log('国际金价:', internationalPrice)
+      
+      const prices = {
+        au9999: { 
+          name: au9999Item?.typename || '足金 999', 
+          price: au9999Item?.price || '0'
+        },
+        au999: { 
+          name: au999Item?.typename || '足金 990', 
+          price: au999Item?.price || '0'
+        },
+        au100: { 
+          name: au100Item?.typename || '足金 999.9', 
+          price: au100Item?.price || '0'
+        },
+        international: { 
+          name: '国际金价', 
+          price: internationalPrice,
+          unit: ' 美元/盎司'
+        }
+      }
+      
+      console.log('最终价格:', prices)
+      return prices
+    } catch (error) {
+      console.error('获取金价失败:', error)
+      // 出错时返回默认值
+      return {
+        au9999: { name: '足金 999', price: '0' },
+        au999: { name: '足金 990', price: '0' },
+        au100: { name: '足金 999.9', price: '0' },
+        international: { name: '国际金价', price: '0', unit: ' 美元/盎司' }
+      }
     }
   },
-  getPriceTrend: (): PriceTrend => {
-    const isUp = Math.random() > 0.5
-    const change = (Math.random() * 2).toFixed(2)
+  getPriceTrend: (currentPrice: number, previousPrice?: number): PriceTrend => {
+    if (!previousPrice) {
+      // 如果没有之前的价格，随机生成趋势
+      const isUp = Math.random() > 0.5
+      const change = (Math.random() * 2).toFixed(2)
+      return {
+        trend: isUp ? 'up' : 'down',
+        direction: isUp ? '↑' : '↓',
+        change
+      }
+    }
+    
+    // 计算涨跌幅
+    const changePercent = ((currentPrice - previousPrice) / previousPrice * 100).toFixed(2)
+    const isUp = parseFloat(changePercent) > 0
+    
     return {
       trend: isUp ? 'up' : 'down',
       direction: isUp ? '↑' : '↓',
-      change
+      change: Math.abs(parseFloat(changePercent)).toFixed(2)
     }
   }
 }
@@ -118,48 +221,18 @@ let chartInitializing = false
 let timer: ReturnType<typeof setInterval> | null = null
 
 const initChart = () => {
-
-  if( chartInstance) return;
+  if (chartInstance) return;
 
   const chartElement = document.getElementById('goldPriceChart')
 
-  if( !chartElement){
+  if (!chartElement) {
     chartInitializing = false
     return
-  };
+  }
 
   chartInstance = echarts.init(chartElement as HTMLElement)
   chartInitializing = false
-  updateChart();
-  return
-
-
-  const query = uni.createSelectorQuery()
-  query.select('#goldPriceChart')
-    .fields({ node: true, size: true })
-    .exec((res: any) => {
-      chartInitializing = false
-      if (res[0]) {
-        const canvas = res[0]
-        const ctx = canvas.getContext('2d')
-        const dpr = uni.getSystemInfoSync().pixelRatio
-        
-        const width = res[0].width
-        const height = res[0].height
-        
-        canvas.width = width * dpr
-        canvas.height = height * dpr
-        ctx.scale(dpr, dpr)
-        
-        chartInstance = echarts.init(canvas as any, null, {
-          width,
-          height,
-          devicePixelRatio: dpr
-        })
-        
-        updateChart()
-      }
-    })
+  updateChart()
 }
 
 const ensureChartInitialized = () => {
@@ -239,12 +312,20 @@ const updateChart = () => {
   chartInstance.setOption(option)
 }
 
-const fetchGoldPrices = () => {
+let previousPrice: number | undefined
+
+const fetchGoldPrices = async () => {
+  console.log('=== 开始获取金价 ===')
   loading.value = true
   
-  setTimeout(() => {
-    const prices = goldPriceService.getCurrentPrices()
-    const trend = goldPriceService.getPriceTrend()
+  try {
+    const prices = await goldPriceService.getCurrentPrices()
+    console.log('获取到价格:', prices)
+    const currentPrice = parseFloat(prices.au9999.price)
+    const trend = goldPriceService.getPriceTrend(currentPrice, previousPrice)
+    
+    // 更新之前的价格
+    previousPrice = currentPrice
     
     goldPrices.value = prices
     priceTrend.value = trend
@@ -252,7 +333,6 @@ const fetchGoldPrices = () => {
     loading.value = false
     
     const currentTime = new Date().toLocaleTimeString()
-    const currentPrice = parseFloat(prices.au9999.price)
     
     priceHistory.value = [...priceHistory.value, { time: currentTime, price: currentPrice }].slice(-10)
     
@@ -260,7 +340,10 @@ const fetchGoldPrices = () => {
     if (chartInstance) {
       updateChart()
     }
-  }, 500)
+  } catch (error) {
+    console.error('获取金价失败:', error)
+    loading.value = false
+  }
 }
 
 const handleRefresh = () => {
@@ -278,7 +361,7 @@ onMounted(() => {
   
   timer = setInterval(() => {
     fetchGoldPrices()
-  }, 5000)
+  }, 5 * 60 * 1000) // 5 分钟刷新一次
 })
 
 onUnmounted(() => {
