@@ -48,7 +48,12 @@
       "postcss": true,
       "minified": true
     },
-    "usingComponents": true
+    "usingComponents": true,
+    "request": {
+      "domain": [
+        "https://api.jisuapi.com"
+      ]
+    }
   },
   "mp-alipay": {
     "usingComponents": true

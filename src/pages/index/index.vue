@@ -44,9 +44,8 @@
     <view class="chart-section">
       <text class="chart-title">金价趋势图</text>
       <view v-if="priceHistory.length > 1" class="chart-container">
-      <view id="goldPriceChart" class="chart-canvas" />
         <canvas 
-          canvas-id="goldPriceChart" 
+          type="2d"
           id="goldPriceChart" 
           class="chart-canvas"
           @touchstart="touchHandler"
@@ -118,23 +117,34 @@ const goldPriceService = {
         throw new Error('API key not configured')
       }
       
-      // 使用 Vite 代理避免 CORS 问题
-      const url = `/api/gold/gold/shgold?appkey=${apiKey}`
+      // 使用原始 API URL（需要在小程序后台配置合法域名）
+      const url = `https://api.jisuapi.com/gold/shgold?appkey=${apiKey}`
       console.log('请求 URL:', url)
       
-      const response = await fetch(url)
-      console.log('响应状态:', response.status)
+      // 使用 uni.request 替代 fetch（支持小程序和 H5）
+      const response = await new Promise<{ statusCode: number; data: GoldAPIResponse }>((resolve, reject) => {
+        uni.request({
+          url,
+          method: 'GET',
+          success: (res) => {
+            resolve({ statusCode: res.statusCode, data: res.data as GoldAPIResponse })
+          },
+          fail: (err) => {
+            reject(err)
+          }
+        })
+      })
       
-      const data: GoldAPIResponse = await response.json()
-      console.log('API 返回数据:', JSON.stringify(data, null, 2))
+      console.log('响应状态:', response.statusCode)
+      console.log('API 返回数据:', JSON.stringify(response.data, null, 2))
       
-      if (data.status !== 0) {
-        console.error('API 返回错误:', data.msg)
-        throw new Error(data.msg || '获取金价失败')
+      if (response.data.status !== 0) {
+        console.error('API 返回错误:', response.data.msg)
+        throw new Error(response.data.msg || '获取金价失败')
       }
       
       // 从 API 结果中提取需要的金价数据
-      const result = data.result
+      const result = response.data.result
       console.log('金价数据数量:', result.length)
       
       // 查找 AU99.99（足金 999）
@@ -223,6 +233,7 @@ let timer: ReturnType<typeof setInterval> | null = null
 const initChart = () => {
   if (chartInstance) return;
 
+  // #ifdef H5
   const chartElement = document.getElementById('goldPriceChart')
 
   if (!chartElement) {
@@ -233,6 +244,37 @@ const initChart = () => {
   chartInstance = echarts.init(chartElement as HTMLElement)
   chartInitializing = false
   updateChart()
+  // #endif
+
+  // #ifndef H5
+  // 小程序平台使用 uni.createSelectorQuery
+  const query = uni.createSelectorQuery()
+  query.select('#goldPriceChart')
+    .fields({ node: true, size: true })
+    .exec((res: any) => {
+      if (!res[0]) {
+        chartInitializing = false
+        return
+      }
+
+      const canvas = res[0]
+      const ctx = canvas.getContext('2d')
+      const dpr = uni.getSystemInfoSync().pixelRatio
+      
+      canvas.width = res[0].width * dpr
+      canvas.height = res[0].height * dpr
+      ctx.scale(dpr, dpr)
+      
+      chartInstance = echarts.init(canvas as any, null, {
+        width: res[0].width,
+        height: res[0].height,
+        devicePixelRatio: dpr
+      })
+      
+      chartInitializing = false
+      updateChart()
+    })
+  // #endif
 }
 
 const ensureChartInitialized = () => {
